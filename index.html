@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Ideias | Brainstorm Criativo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-pink: #FF007F;
+            --color-lime: #CCFF00;
+            --color-cyan: #00FFFF;
+            --bg-dark: #111111;
+            --ui-gray: #222222;
+        }
+        
+        body {
+            background-color: var(--bg-dark);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Prevent body scroll, manage in flex boxes */
+        }
+
+        .font-display {
+            font-family: 'Bebas Neue', cursive;
+            letter-spacing: 1px;
+        }
+
+        /* Estilo Recorte de Revista para as Palavras */
+        .word-card {
+            display: inline-block;
+            padding: 1rem 2rem;
+            color: black;
+            font-size: 3rem;
+            text-transform: uppercase;
+            box-shadow: 4px 4px 0px rgba(255,255,255,0.9);
+            border: 2px solid black;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            user-select: none;
+        }
+
+        .word-card:hover {
+            transform: scale(1.05) rotate(0deg) !important;
+            box-shadow: 6px 6px 0px white;
+            z-index: 10;
+        }
+
+        /* Cores dos Cartões */
+        .bg-cut-pink { background-color: var(--color-pink); }
+        .bg-cut-lime { background-color: var(--color-lime); }
+        .bg-cut-cyan { background-color: var(--color-cyan); }
+
+        /* Botões estilo brutalista */
+        .btn-brutal {
+            padding: 0.75rem 1.5rem;
+            font-family: 'Bebas Neue', cursive;
+            font-size: 1.5rem;
+            color: black;
+            background-color: white;
+            border: 2px solid white;
+            box-shadow: 3px 3px 0px rgba(255,255,255,0.5);
+            transition: all 0.1s ease;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+        .btn-brutal:active {
+            transform: translate(3px, 3px);
+            box-shadow: 0px 0px 0px transparent;
+        }
+        .btn-brutal.active {
+            background-color: var(--color-lime);
+            box-shadow: 3px 3px 0px rgba(204,255,0,0.5);
+        }
+
+        /* Custom Checkbox */
+        .check-container {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            padding-left: 35px;
+            margin-bottom: 12px;
+            font-size: 1rem;
+            user-select: none;
+        }
+        .check-container input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
+        }
+        .checkmark {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 25px;
+            width: 25px;
+            background-color: transparent;
+            border: 2px solid white;
+            transition: all 0.2s;
+        }
+        .check-container:hover input ~ .checkmark {
+            border-color: var(--color-lime);
+        }
+        .check-container input:checked ~ .checkmark {
+            background-color: var(--color-lime);
+            border-color: var(--color-lime);
+        }
+        .checkmark:after {
+            content: "X";
+            position: absolute;
+            display: none;
+            color: black;
+            font-weight: 900;
+            font-size: 18px;
+            left: 5px;
+            top: -1px;
+            font-family: monospace;
+        }
+        .check-container input:checked ~ .checkmark:after {
+            display: block;
+        }
+
+        /* Scrollbar customizada */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); border-left: 1px solid #333; }
+        ::-webkit-scrollbar-thumb { background: #555; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-lime); }
+
+        #progress-bar-fill {
+            transition: width 1s linear;
+        }
+
+        .saved-idea-item {
+            border-left: 4px solid var(--color-pink);
+        }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen w-full">
+
+    <!-- PAINEL LATERAL (Configurações) -->
+    <aside class="w-full md:w-80 border-r border-gray-800 bg-[#111] flex flex-col h-full z-20 shrink-0">
+        <div class="p-6 border-b border-gray-800">
+            <h1 class="font-display text-4xl text-white tracking-wider mb-1">
+                GERADOR DE <span class="text-[#CCFF00]">IDEIAS</span>
+            </h1>
+            <p class="text-xs text-gray-400">Pressione botões ou use o timer para inspirar-se.</p>
+        </div>
+
+        <div class="p-6 overflow-y-auto flex-1 flex flex-col gap-6">
+            
+            <!-- Quantidade de Palavras -->
+            <div>
+                <label class="block font-display text-2xl mb-2">Qtd. de Palavras</label>
+                <input type="number" id="word-count" value="5" min="1" max="10" 
+                    class="w-full bg-transparent border-2 border-white p-2 text-white font-bold text-xl focus:border-[#00FFFF] outline-none">
+            </div>
+
+            <!-- Objetivo da Ideia -->
+            <div>
+                <label class="block font-display text-2xl mb-2 text-[#00FFFF]">Objetivo da Ideia</label>
+                <p class="text-xs text-gray-400 mb-2">Muda o estilo da frase-molde de exemplo.</p>
+                <select id="idea-objective" class="w-full bg-[#222] border-2 border-[#00FFFF] p-2 text-white outline-none cursor-pointer">
+                    <option value="livre">Tema Livre</option>
+                    <option value="produto">Nome / Produto</option>
+                    <option value="personagem">Personagem</option>
+                    <option value="cena">Cena de História</option>
+                    <option value="piada">Piada / Humor</option>
+                    <option value="mecanica">Mecânica de Jogo</option>
+                </select>
+            </div>
+
+            <!-- Categorias -->
+            <div>
+                <label class="block font-display text-2xl mb-3">Categorias</label>
+                <div id="category-list" class="flex flex-col gap-1">
+                    <!-- Gerado via JS -->
+                </div>
+            </div>
+            
+            <!-- Ideias Salvas (Lateral) -->
+            <div class="mt-4 border-t border-gray-800 pt-6">
+                <label class="block font-display text-2xl mb-3 text-[#FF007F]">Ideias Salvas</label>
+                <div id="saved-ideas-list" class="flex flex-col gap-3 text-sm text-gray-300 empty:before:content-['Nenhuma_ideia_salva_ainda.'] empty:before:text-gray-600 empty:before:italic">
+                    <!-- Ideias salvas aparecerão aqui -->
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL -->
+    <main class="flex-1 flex flex-col relative bg-[#1a1a1a] overflow-hidden">
+        
+        <!-- Barra de Progresso (Timer) -->
+        <div class="w-full h-2 bg-gray-800 absolute top-0 left-0 z-10">
+            <div id="progress-bar-fill" class="h-full bg-[#CCFF00] w-full shadow-[0_0_10px_#CCFF00]"></div>
+        </div>
+        
+        <!-- Indicador visual do timer e status -->
+        <div class="absolute top-6 right-6 z-20 flex gap-4 items-center">
+            <span id="timer-text" class="font-display text-3xl text-white">15s</span>
+            <span id="status-indicator" class="px-2 py-1 bg-green-500 text-black font-bold text-xs uppercase rounded hidden">Ativo</span>
+        </div>
+
+        <!-- Container de Palavras e Frase -->
+        <div class="flex-1 flex flex-col items-center justify-center p-8 relative">
+            
+            <!-- Palavras (Magazine Cutout) -->
+            <div id="words-container" class="flex flex-wrap justify-center items-center gap-6 max-w-5xl mb-12 min-h-[200px]">
+                <!-- Palavras geradas aqui -->
+            </div>
+
+            <!-- Frase Molde -->
+            <div class="max-w-2xl text-center mb-8 px-6 py-4 bg-[#111] border border-gray-700 rounded-lg shadow-lg">
+                <p class="text-xs text-[#00FFFF] uppercase tracking-widest mb-2 font-bold">Frase-molde para inspiração</p>
+                <p id="template-text" class="text-xl text-gray-300 italic font-serif leading-relaxed">
+                    Carregando molde...
+                </p>
+            </div>
+
+            <!-- Campo de Conexão Rápida -->
+            <div class="w-full max-w-xl">
+                <label class="block text-xs text-gray-400 uppercase tracking-widest mb-2 font-bold text-center">Sua ideia com essas palavras:</label>
+                <div class="flex gap-2">
+                    <input type="text" id="quick-idea-input" placeholder="Digite aqui e aperte Enter..." 
+                        class="flex-1 bg-[#222] text-white border border-gray-600 focus:border-[#FF007F] outline-none px-4 py-3 rounded-sm">
+                    <button id="btn-save-idea" class="bg-[#FF007F] text-black font-bold px-6 py-3 uppercase hover:bg-white transition-colors">
+                        Salvar
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Controles Inferiores -->
+        <div class="bg-[#111] border-t border-gray-800 p-6 flex flex-wrap justify-center gap-4 z-20">
+            <button id="btn-prev" class="btn-brutal">&lt; Anterior</button>
+            <button id="btn-pause" class="btn-brutal">Pausar Timer</button>
+            <button id="btn-next" class="btn-brutal bg-white">Pular &gt;</button>
+        </div>
+
+    </main>
+
+    <script>
+        // DADOS: Banco de palavras categorizadas
+        const wordData = {
+            'Aleatório': [], // Placeholder for random logic
+            'Cor': ['Vermelho', 'Azul Profundo', 'Amarelo Neon', 'Verde Musgo', 'Roxo', 'Laranja', 'Rosa Choque', 'Cinza Metálico', 'Marrom', 'Dourado', 'Prateado', 'Preto Fosco'],
+            'Cheiro': ['Café Torrado', 'Chuva de Verão', 'Pão Quente', 'Fumaça', 'Perfume Doce', 'Esgoto', 'Menta Fresca', 'Terra Molhada', 'Pinho', 'Canela'],
+            'Objeto': ['Espelho', 'Chave Mestra', 'Cadeira Quebrada', 'Relógio de Bolso', 'Faca', 'Livro Antigo', 'Garrafa', 'Lanterna', 'Caixa de Madeira', 'Tesoura'],
+            'Animal': ['Gato Preto', 'Cachorro Fiel', 'Lobo Solitário', 'Corvo', 'Cobra', 'Águia', 'Sapo', 'Aranha Gigante', 'Elefante', 'Urso'],
+            'Ação': ['Correr', 'Pular', 'Esconder', 'Gritar', 'Sussurrar', 'Cair', 'Voar', 'Quebrar', 'Construir', 'Chorar', 'Investigar', 'Sobreviver'],
+            'Sentimento': ['Alegria', 'Tristeza Profunda', 'Raiva', 'Medo', 'Surpresa', 'Nojo', 'Esperança', 'Ansiedade', 'Culpa', 'Amor Incondicional'],
+            'Profissão': ['Médico', 'Detetive Particular', 'Professor', 'Cozinheiro', 'Astronauta', 'Pintor', 'Músico', 'Ladrão de Casaca', 'Cientista Louco'],
+            'Clima': ['Tempestade', 'Ensolarado', 'Nevasca', 'Neblina Densa', 'Garoa', 'Furacão', 'Seca Extrema', 'Ventania'],
+            'Comida': ['Maçã Envenenada', 'Pizza Fria', 'Sopa Quente', 'Pão Bolorento', 'Sorvete Derretido', 'Carne Crua', 'Chocolate Amargo', 'Queijo Fedido'],
+            'Época': ['Era Vitoriana', 'Idade Média', 'Futuro Cyberpunk', 'Anos 80', 'Pré-história', 'Renascimento', 'Fim do Mundo'],
+            'Elemento': ['Fogo', 'Água Cristalina', 'Terra Vermelha', 'Ar Rarefeito', 'Gelo Eterno', 'Eletricidade', 'Luz Ofuscante', 'Sombra'],
+            'Som': ['Grito Agudo', 'Sussurro', 'Explosão', 'Tique-taque', 'Passos Lentos', 'Uivo do Vento', 'Sirene', 'Risada Maligna', 'Choro de Bebê'],
+            'Textura': ['Áspero', 'Liso', 'Pegajoso', 'Macio', 'Duro como Pedra', 'Frio', 'Quente', 'Escorregadio', 'Peludo', 'Pontudo']
+        };
+
+        const allCategories = Object.keys(wordData).filter(c => c !== 'Aleatório');
+        
+        // Cores disponíveis para os recortes
+        const cutColors = ['bg-cut-pink', 'bg-cut-lime', 'bg-cut-cyan'];
+
+        // Modelos de frases baseados no objetivo
+        const templates = {
+            'livre': [
+                "A estranha combinação de {0} com {1} resulta em {2}.",
+                "Um conceito de {0} que traz a sensação de {1} através de {2}.",
+                "O que acontece quando você mistura {0}, {1} e {2}?"
+            ],
+            'produto': [
+                "Uma marca de {0} inovadora, inspirada em {1} e focada em {2}.",
+                "O primeiro {0} do mercado que utiliza {1} para gerar {2}.",
+                "Um aplicativo para amantes de {0} que resolve problemas com {1}."
+            ],
+            'personagem': [
+                "Um {0} que tem pavor secreto de {1}, mas é excelente em {2}.",
+                "Um protagonista marcado por {0}, que sempre carrega {1} enquanto busca {2}.",
+                "Alguém que vive na época do(a) {0}, trabalha como {1} e seu maior traço é {2}."
+            ],
+            'cena': [
+                "Tudo estava focado em {0} até que {1} provocou um repentino {2}.",
+                "A cena se passa em meio a {0}, onde {1} encontra {2} inesperadamente.",
+                "O clímax ocorre quando {0} é revelado, causando {1} seguido de {2}."
+            ],
+            'piada': [
+                "Por que o {0} cruzou com o {1}? Para encontrar o {2}!",
+                "Qual a semelhança entre {0} e {1}? Ambos causam {2}.",
+                "O que o {0} disse para o {1} quando viu {2}?"
+            ],
+            'mecanica': [
+                "O jogador deve usar {0} para evitar {1} enquanto coleta {2}.",
+                "Uma mecânica onde cada vez que ocorre {0}, o ambiente se torna {1} exigindo {2}.",
+                "Você perde pontos ao interagir com {0}, mas ganha habilidades de {1} e {2}."
+            ]
+        };
+
+        // Estado
+        let state = {
+            history: [], // Guarda objetos { words: [], objective: '', template: '' }
+            currentIndex: -1,
+            timeLeft: 15,
+            timerInterval: null,
+            isPaused: false,
+            savedIdeas: []
+        };
+
+        // Elementos DOM
+        const elCategories = document.getElementById('category-list');
+        const elWordCount = document.getElementById('word-count');
+        const elObjective = document.getElementById('idea-objective');
+        const elWordsContainer = document.getElementById('words-container');
+        const elTemplateText = document.getElementById('template-text');
+        const elProgressBar = document.getElementById('progress-bar-fill');
+        const elTimerText = document.getElementById('timer-text');
+        
+        const btnPrev = document.getElementById('btn-prev');
+        const btnPause = document.getElementById('btn-pause');
+        const btnNext = document.getElementById('btn-next');
+        
+        const inputIdea = document.getElementById('quick-idea-input');
+        const btnSaveIdea = document.getElementById('btn-save-idea');
+        const listSavedIdeas = document.getElementById('saved-ideas-list');
+
+        function init() {
+            renderCategoryCheckboxes();
+            setupEventListeners();
+            generateNext(); // Gera primeira ideia
+            startTimer();
+        }
+
+        function renderCategoryCheckboxes() {
+            // Render Aleatório first
+            elCategories.innerHTML = createCheckboxHTML('Aleatório', true);
+            
+            // Render the rest
+            allCategories.forEach(cat => {
+                elCategories.innerHTML += createCheckboxHTML(cat, false);
+            });
+        }
+
+        function createCheckboxHTML(label, isChecked) {
+            return `
+                <label class="check-container text-gray-200 hover:text-white">
+                    ${label}
+                    <input type="checkbox" value="${label}" class="category-check" ${isChecked ? 'checked' : ''}>
+                    <span class="checkmark"></span>
+                </label>
+            `;
+        }
+
+        function getSelectedCategories() {
+            const checks = document.querySelectorAll('.category-check:checked');
+            let selected = Array.from(checks).map(c => c.value);
+            return selected;
+        }
+
+        function getRandomItem(array) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+
+        function getCompatibleCategoriesByObjective(objective) {
+            const compatibility = {
+                livre: [allCategories, allCategories, allCategories],
+                produto: [
+                    ['Objeto', 'Cor', 'Comida', 'Textura'],
+                    ['Cor', 'Cheiro', 'Textura', 'Elemento'],
+                    ['Sentimento', 'Ação', 'Objeto']
+                ],
+                personagem: [
+                    ['Profissão', 'Animal', 'Objeto'],
+                    ['Sentimento', 'Ação', 'Elemento'],
+                    ['Ação', 'Sentimento', 'Profissão']
+                ],
+                cena: [
+                    ['Clima', 'Elemento', 'Cor', 'Objeto'],
+                    ['Ação', 'Som', 'Sentimento'],
+                    ['Sentimento', 'Ação', 'Elemento']
+                ],
+                piada: [
+                    ['Objeto', 'Animal', 'Profissão'],
+                    ['Objeto', 'Animal', 'Profissão'],
+                    ['Ação', 'Sentimento', 'Objeto']
+                ],
+                mecanica: [
+                    ['Ação', 'Objeto', 'Elemento'],
+                    ['Ação', 'Elemento', 'Clima', 'Som'],
+                    ['Ação', 'Sentimento', 'Objeto']
+                ]
+            };
+
+            return compatibility[objective] || compatibility.livre;
+        }
+
+        function getWordsByCompatibleCategory(categories, objective) {
+            const compatibleSlots = getCompatibleCategoriesByObjective(objective);
+            const selection = [];
+
+            compatibleSlots.forEach((slotCategories, index) => {
+                const pool = slotCategories.filter(cat => categories.includes(cat) || categories.includes('Aleatório'));
+                const safePool = pool.length ? pool : categories;
+                const categoryToUse = getRandomItem(safePool);
+                const wordList = wordData[categoryToUse] || [];
+                const word = getRandomItem(wordList.length ? wordList : ['Ideia']);
+                selection.push({ index, category: categoryToUse, word });
+            });
+
+            return selection;
+        }
+
+        function generateWordsLogic(objective = elObjective.value) {
+            let count = parseInt(elWordCount.value) || 5;
+            if (count < 1) count = 1;
+
+            let selectedCats = getSelectedCategories();
+
+            if (selectedCats.length === 0 || selectedCats.includes('Aleatório')) {
+                selectedCats = allCategories;
+            } else {
+                selectedCats = selectedCats.filter(c => c !== 'Aleatório');
+            }
+
+            if (objective !== 'livre') {
+                const compatibleWords = getWordsByCompatibleCategory(selectedCats, objective);
+                const words = compatibleWords.map(item => item.word);
+
+                if (words.length >= count) {
+                    return words.slice(0, count);
+                }
+
+                while (words.length < count) {
+                    const categoryToUse = getRandomItem(selectedCats);
+                    const word = getRandomItem(wordData[categoryToUse] || ['Ideia']);
+                    words.push(word);
+                }
+
+                return words.slice(0, count);
+            }
+
+            const shuffledCats = [...selectedCats].sort(() => 0.5 - Math.random());
+            const chosenWords = [];
+
+            for (let i = 0; i < count; i++) {
+                const categoryToUse = i < shuffledCats.length ? shuffledCats[i] : getRandomItem(selectedCats);
+                const wordList = wordData[categoryToUse] || ['Ideia'];
+                chosenWords.push(getRandomItem(wordList));
+            }
+
+            return chosenWords;
+        }
+
+        function generateTemplateLogic(words, objective) {
+            const objectiveTemplates = templates[objective] || templates['livre'];
+            const templateStr = getRandomItem(objectiveTemplates);
+            const wordsForTemplate = [...words].sort(() => 0.5 - Math.random());
+            const safeWords = wordsForTemplate.length ? wordsForTemplate : ['Ideia', 'Explosão', 'Surpresa'];
+
+            let finalTemplate = templateStr;
+            for (let i = 0; i < 3; i++) {
+                const wordToInject = safeWords[i] || safeWords[safeWords.length - 1] || '___';
+                finalTemplate = finalTemplate.replace(`{${i}}`, `<span class="text-[#CCFF00] uppercase font-bold">${wordToInject}</span>`);
+            }
+
+            return finalTemplate;
+        }
+
+        function generateNext() {
+            // Se estiver no passado do histórico e pedir próxima
+            if (state.currentIndex < state.history.length - 1) {
+                state.currentIndex++;
+                renderCurrentState();
+                return;
+            }
+
+            // Gera nova ideia
+            const objective = elObjective.value;
+            const words = generateWordsLogic(objective);
+            const template = generateTemplateLogic(words, objective);
+
+            const newIdea = { words, objective, template };
+            
+            // Adiciona ao histórico e avança o index
+            state.history.push(newIdea);
+            state.currentIndex = state.history.length - 1;
+            
+            renderCurrentState();
+        }
+
+        function goPrevious() {
+            if (state.currentIndex > 0) {
+                state.currentIndex--;
+                renderCurrentState();
+                // Pausa automaticamente ao voltar no tempo para não pular enquanto lê
+                if (!state.isPaused) togglePause(); 
+            }
+        }
+
+        function renderCurrentState() {
+            const currentIdea = state.history[state.currentIndex];
+            
+            // Limpar palavras
+            elWordsContainer.innerHTML = '';
+            
+            // Renderizar palavras estilo revista
+            currentIdea.words.forEach(word => {
+                const colorClass = getRandomItem(cutColors);
+                const rotation = (Math.random() * 8) - 4; // -4deg a 4deg
+                
+                const el = document.createElement('div');
+                el.className = `word-card font-display ${colorClass}`;
+                el.style.transform = `rotate(${rotation}deg)`;
+                el.textContent = word;
+                
+                elWordsContainer.appendChild(el);
+            });
+
+            // Atualizar Frase-molde
+            elTemplateText.innerHTML = currentIdea.template;
+
+            // Atualizar estado dos botões
+            btnPrev.style.opacity = state.currentIndex === 0 ? '0.3' : '1';
+            btnPrev.style.pointerEvents = state.currentIndex === 0 ? 'none' : 'auto';
+
+            // Reseta o timer visual
+            resetTimerUI();
+        }
+
+        function startTimer() {
+            if (state.timerInterval) clearInterval(state.timerInterval);
+            
+            state.timerInterval = setInterval(() => {
+                if (state.isPaused) return;
+
+                state.timeLeft--;
+                updateTimerUI();
+
+                if (state.timeLeft <= 0) {
+                    saveIdeaFromInput(); // Salva se tiver algo digitado antes de girar
+                    generateNext();
+                }
+            }, 1000);
+        }
+
+        function togglePause() {
+            state.isPaused = !state.isPaused;
+            if (state.isPaused) {
+                btnPause.textContent = "Retomar Timer";
+                btnPause.classList.add('active');
+                elProgressBar.classList.replace('bg-[#CCFF00]', 'bg-gray-500');
+                elProgressBar.style.boxShadow = 'none';
+            } else {
+                btnPause.textContent = "Pausar Timer";
+                btnPause.classList.remove('active');
+                elProgressBar.classList.replace('bg-gray-500', 'bg-[#CCFF00]');
+                elProgressBar.style.boxShadow = '0 0 10px #CCFF00';
+            }
+        }
+
+        function resetTimerUI() {
+            state.timeLeft = 15;
+            updateTimerUI();
+        }
+
+        function updateTimerUI() {
+            const percentage = (state.timeLeft / 15) * 100;
+            elProgressBar.style.width = `${percentage}%`;
+            elTimerText.textContent = `${state.timeLeft}s`;
+        }
+
+        function saveIdeaFromInput() {
+            const text = inputIdea.value.trim();
+            if (text === '') return;
+
+            // Pega as palavras do momento em que a pessoa salvou
+            const currentIdea = state.history[state.currentIndex];
+            const wordsUsed = currentIdea.words.join(', ');
+
+            const savedItem = {
+                text: text,
+                context: wordsUsed,
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            };
+
+            state.savedIdeas.unshift(savedItem); // Add ao começo
+            inputIdea.value = ''; // Limpa input
+            renderSavedIdeas();
+        }
+
+        function renderSavedIdeas() {
+            listSavedIdeas.innerHTML = '';
+            state.savedIdeas.forEach(idea => {
+                const el = document.createElement('div');
+                el.className = 'saved-idea-item bg-[#1a1a1a] p-3 rounded text-white shadow';
+                el.innerHTML = `
+                    <p class="font-bold mb-1">${idea.text}</p>
+                    <p class="text-xs text-gray-500">Baseado em: ${idea.context}</p>
+                    <p class="text-[10px] text-gray-600 text-right mt-1">${idea.time}</p>
+                `;
+                listSavedIdeas.appendChild(el);
+            });
+        }
+
+        function setupEventListeners() {
+            btnNext.addEventListener('click', () => {
+                saveIdeaFromInput();
+                generateNext();
+                // Se pular manualmente e estiver pausado, despausa para manter o fluxo
+                if (state.isPaused) togglePause();
+            });
+            
+            btnPrev.addEventListener('click', goPrevious);
+            btnPause.addEventListener('click', togglePause);
+
+            // Salvamento rápido
+            btnSaveIdea.addEventListener('click', saveIdeaFromInput);
+            inputIdea.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') saveIdeaFromInput();
+            });
+
+            // Evitar que digitar no input acione atalhos se houver
+            inputIdea.addEventListener('focus', () => {
+                if (!state.isPaused) togglePause(); // Pausa o timer enquanto o usuário digita
+            });
+            inputIdea.addEventListener('blur', () => {
+                 // Pode despausar se quiser, mas deixaremos pausado para não pressionar a pessoa
+            });
+            
+            // Regra especial pros checkboxes: Se clicar em 'Aleatório', limpa os outros se quiser (opcional)
+            // Aqui vamos apenas garantir que tem pelo menos 1 categoria
+            elCategories.addEventListener('change', () => {
+                const checked = document.querySelectorAll('.category-check:checked');
+                if (checked.length === 0) {
+                    // Força Aleatório se desmarcar tudo
+                    document.querySelector('input[value="Aleatório"]').checked = true;
+                }
+            });
+        }
+
+        // Iniciar app
+        window.onload = init;
+
+    </script>
+</body>
+</html>
